@@ -1,5 +1,5 @@
 function logClients(clients) {
-  console.log('Connected users:');
+  console.log(Object.keys.length + ' connected users:');
   console.log('---------------------------------------------------');
   Object.keys(clients).forEach(id => {
     const { name } = clients[id];

@@ -16,17 +16,18 @@ let gameState = {
   players: []
 };
 
-server.on('connection', function(socket, next) {
+server.sockets.on('connection', function(clientSocket) {
   console.log('user connected');
-  const id = socket.request._query.id;
-  const presenter = socket.request._query.presenter;
+  const id = clientSocket.request._query.id;
+  const presenter = clientSocket.request._query.presenter;
 
   if (presenter) {
     console.log('Presenter connected');
-    presenterSocket = socket;
+    presenterSocket = clientSocket;
     sendUserlist(gameState, clients, presenterSocket);
+    sendGameState(gameState, clients, presenterSocket);
 
-    socket.on('selectPlayer', function(id) {
+    clientSocket.on('selectPlayer', function(id) {
       if (
         clients[id] &&
         gameState.players.filter(p => p.id === id).length === 0
@@ -46,20 +47,39 @@ server.on('connection', function(socket, next) {
         );
       }
     });
+
+    clientSocket.on('removePlayer', function(id) {
+      gameState.players = gameState.players.filter(p => p.id !== id);
+      console.log(`Removed player ${id}`);
+      logGameState(gameState);
+      sendGameState(gameState, clients, presenterSocket);
+    });
+
+    clientSocket.on('advanceRound', function() {
+      gameState.round += 1;
+      sendGameState(gameState, clients, presenterSocket);
+    });
   } else if (id) {
     if (clients[id]) {
       console.log('reconnecting user ' + id);
-      socket.emit('onConnect', { name: clients[id].name, gameState });
     } else {
-      clients[id] = { socket, name: '' };
+      clients[id] = { socket: clientSocket, name: '' };
+      // clientSocket.emit('gameStateUpdate', gameState);
     }
+    clientSocket.emit('onConnect', { name: clients[id].name, gameState });
+
+    clientSocket.on('disconnect', function() {
+      console.log('a user disconnected');
+      delete clients[id];
+      logClients(clients);
+    });
     logClients(clients);
     sendUserlist(clients, presenterSocket);
   } else {
     console.log('No id or presenter flag supplied on connection');
   }
 
-  socket.on('setName', function({ id, name }) {
+  clientSocket.on('setName', function({ id, name }) {
     clients[id].name = name;
     console.log(`Set name of ${id} to ${name}`);
     const playingPlayer = gameState.players.find(p => p.id === id);
