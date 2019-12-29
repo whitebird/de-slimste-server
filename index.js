@@ -1,8 +1,7 @@
 const io = require('socket.io');
 const server = io.listen(5000);
-const logIpAddresses = require('./logIpAddresses').default;
 const { sendUserlist, sendGameState } = require('./emitters');
-const { logClients, logGameState } = require('./loggers');
+const { logIpAddresses, logClients, logGameState } = require('./loggers');
 
 console.log(
   'Server starts at port 5000 on the following interfaces and ip addresses'
